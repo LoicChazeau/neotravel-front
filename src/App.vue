@@ -24,11 +24,14 @@ import ChatbotBody from "./components/ChatbotBody.vue";
 .chatbot-container {
   display: flex;
   justify-content: center;
+  height: 100%;
   flex: 1;
   padding: 30px 0;
 }
 .chatbot-background {
-  height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 476px;
   width: 80%;
   background-color: white;
   border-radius: 10px;

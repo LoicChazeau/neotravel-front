@@ -36,12 +36,13 @@ const sendMessage = () => {
 .chatbot-body {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  height: 400px;
   padding: 10px 20px;
 }
 .chatbot-messages {
   flex: 1;
   overflow-y: auto;
-  margin-bottom: 10px;
 }
 .chatbot-message {
   margin: 10px 0;
@@ -52,6 +53,7 @@ const sendMessage = () => {
 .chatbot-input-container {
   display: flex;
   align-items: center;
+  padding-top: 10px;
 }
 .chatbot-input {
   flex: 1;
@@ -60,6 +62,7 @@ const sendMessage = () => {
   background-color: #fafafa;
   border-radius: 10px;
   margin-right: 10px;
+  font-size: 13px;
 }
 .chatbot-input:focus-visible {
   outline: #4e38cc auto 1px;
