@@ -2,9 +2,8 @@
   <h2 class="chatbot-title">Notre ChatBot vous permet de créer un devis en moins de 5 minutes ou de répondre à vos questions !</h2>
   <div class="chatbot-container">
     <div class="chatbot-background">
-      <!-- <ChatbotHeader />
-      <ChatbotBody /> -->
-      <button @click="test()">test</button>
+      <ChatbotHeader />
+      <ChatbotBody />
     </div>
   </div>
 </template>
@@ -16,12 +15,7 @@ import ChatbotBody from "./components/ChatbotBody.vue";
 export default {
   components: {
     ChatbotHeader,
-    ChatbotBody,
-  },
-  methods: {
-    test() {
-      console.log("test")
-    }
+    ChatbotBody
   }
 };
 </script>
