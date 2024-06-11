@@ -17,7 +17,7 @@ import ChatbotBody from "./components/ChatbotBody.vue";
 .chatbot-title {
   text-align: center;
   margin: 0;
-  margin-top: 10px;
+  margin-top: 5px;
   font-size: 18px;
   line-height: 28px;
 }
@@ -25,12 +25,11 @@ import ChatbotBody from "./components/ChatbotBody.vue";
   display: flex;
   justify-content: center;
   flex: 1;
-  padding: 40px 0;
-  overflow-y: auto;
+  padding: 30px 0;
 }
 .chatbot-background {
   height: 100%;
-  width: 75%;
+  width: 80%;
   background-color: white;
   border-radius: 10px;
   box-shadow: 0px 2px 10px 0px rgb(0 0 0 / 30%);

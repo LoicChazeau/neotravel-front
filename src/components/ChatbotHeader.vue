@@ -1,11 +1,13 @@
 <template>
   <div class="chatbot-header">
-    <img src="../assets/logo.svg" alt="Chatbot Logo" class="chatbot-logo" />
+    <img :src="logoUrl" alt="Chatbot Logo" class="chatbot-logo" />
     <span class="chatbot-name">NeotravelBot</span>
   </div>
 </template>
 
-<script setup></script>
+<script setup>
+const logoUrl = import.meta.env.VITE_LOGO_URL;
+</script>
 
 <style scoped>
 .chatbot-header {
