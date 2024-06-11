@@ -1,13 +1,13 @@
 <template>
   <div class="chatbot-body">
     <div class="chatbot-messages">
-      <div class="chatbot-message">
-        test
+      <div v-for="message in messages" :key="message.id" class="chatbot-message">
+        {{ message.text }}
       </div>
     </div>
     <div class="chatbot-input-container">
-      <input class="chatbot-input" type="text" placeholder="Une question ?"/>
-      <img class="chatbot-input-btn" :src="sendUrl" alt="Send button" />
+      <input class="chatbot-input" type="text" placeholder="Une question ?" v-model="userInput" @keyup.enter="sendMessage" />
+      <img class="chatbot-input-btn" @click="sendMessage" :src="sendUrl" alt="Send button" />
     </div>
   </div>
 </template>
@@ -17,7 +17,21 @@ export default {
   data() {
     return {
       sendUrl: import.meta.env.VITE_SEND_URL,
+      messages: [
+        { id: 1, text: "Bonjour ! Comment puis-je vous aider ?" },
+        // Ajoutez d'autres messages ici
+      ],
+      userInput: "",
     };
+  },
+  methods: {
+    sendMessage() {
+      console.log("sendMessage called");
+      if (this.userInput.trim()) {
+        this.messages.push({ id: this.messages.length + 1, text: this.userInput });
+        this.userInput = "";
+      }
+    },
   },
 };
 </script>
