@@ -7,13 +7,15 @@
     </div>
     <div class="chatbot-input-container">
       <input class="chatbot-input" type="text" placeholder="Une question ?" v-model="userInput" @keyup.enter="sendMessage" />
-      <img class="chatbot-input-btn" @click="sendMessage" src="../assets/send.svg" alt="Send button" />
+      <img class="chatbot-input-btn" @click="sendMessage" :src="sendUrl" alt="Send button" />
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from "vue";
+
+const sendUrl = import.meta.env.VITE_SEND_URL;
 
 const messages = ref([
   { id: 1, text: "Bonjour ! Comment puis-je vous aider ?" },
