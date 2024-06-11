@@ -1,4 +1,3 @@
-// vite.config.js
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
@@ -12,15 +11,7 @@ export default defineConfig({
         entryFileNames: 'assets/[name].js',
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]'
-      },
-      plugins: [
-        {
-          name: 'rename-variables',
-          transform(code) {
-            return code.replace(/\bur\b/g, '_uniqueVarName');
-          }
-        }
-      ]
+      }
     }
   }
 });
