@@ -1,8 +1,12 @@
 #app {
+  font-family: 'Poppins', sans-serif;
   width: 546px;
   max-width: 546px;
   height: 76vh;
   background-color: white;
   border-radius: 20px;
   padding: 1rem;
+  border: solid 1px;
+  display: flex;
+  flex-direction: column;
 }
