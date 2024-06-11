@@ -5,8 +5,14 @@
   </div>
 </template>
 
-<script setup>
-const logoUrl = import.meta.env.VITE_LOGO_URL;
+<script>
+export default {
+  data() {
+    return {
+      logoUrl: import.meta.env.VITE_LOGO_URL,
+    };
+  },
+};
 </script>
 
 <style scoped>

@@ -12,23 +12,27 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from "vue";
-
-const sendUrl = import.meta.env.VITE_SEND_URL;
-
-const messages = ref([
-  { id: 1, text: "Bonjour ! Comment puis-je vous aider ?" },
-  // Ajoutez d'autres messages ici
-]);
-
-const userInput = ref("");
-
-const sendMessage = () => {
-  if (userInput.value.trim()) {
-    messages.value.push({ id: messages.value.length + 1, text: userInput.value });
-    userInput.value = "";
-  }
+<script>
+export default {
+  data() {
+    return {
+      sendUrl: import.meta.env.VITE_SEND_URL,
+      messages: [
+        { id: 1, text: "Bonjour ! Comment puis-je vous aider ?" },
+        // Ajoutez d'autres messages ici
+      ],
+      userInput: "",
+    };
+  },
+  methods: {
+    sendMessage() {
+      console.log("sendMessage called");
+      if (this.userInput.trim()) {
+        this.messages.push({ id: this.messages.length + 1, text: this.userInput });
+        this.userInput = "";
+      }
+    },
+  },
 };
 </script>
 

@@ -8,9 +8,16 @@
   </div>
 </template>
 
-<script setup>
+<script>
 import ChatbotHeader from "./components/ChatbotHeader.vue";
 import ChatbotBody from "./components/ChatbotBody.vue";
+
+export default {
+  components: {
+    ChatbotHeader,
+    ChatbotBody,
+  },
+};
 </script>
 
 <style scoped>
