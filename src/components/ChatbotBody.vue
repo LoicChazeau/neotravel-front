@@ -15,18 +15,22 @@
         <div class="quick-actions-btn" @click="handleQuickAction('J\'ai une question')">J'ai une question</div>
       </div>
       <div v-if="isFormStep" class="quick-actions">
-        <div v-if="currentStep === 1">
-          <div class="quick-actions-btn" @click="handleFormStep('Un particulier')">Un particulier</div>
-          <div class="quick-actions-btn" @click="handleFormStep('Une entreprise')">Une entreprise</div>
-          <div class="quick-actions-btn" @click="handleFormStep('Une association')">Une association</div>
-          <div class="quick-actions-btn" @click="handleFormStep('Une collectivité')">Une collectivité</div>
+        <div v-for="option in currentOptions" :key="option" class="quick-actions-btn" @click="handleFormStep(option)">
+          {{ option }}
         </div>
-        <!-- Ajoutez d'autres étapes ici -->
       </div>
     </div>
     <div class="chatbot-input-container">
-      <input class="chatbot-input" type="text" placeholder="Une question ?" v-model="userInput" @keyup.enter="sendMessage" />
-      <img class="chatbot-input-btn" @click="sendMessage" :src="sendUrl" alt="Send button" />
+      <input
+        class="chatbot-input"
+        :type="inputType"
+        :placeholder="inputPlaceholder"
+        v-model="userInput"
+        @keyup.enter="sendMessage()"
+        :disabled="inputDisabled"
+        ref="userInput"
+      />
+      <img class="chatbot-input-btn" @click="sendMessage()" :src="sendUrl" alt="Send button" :class="{ disabled: inputDisabled }" />
     </div>
   </div>
 </template>
@@ -46,13 +50,56 @@ export default {
       currentStep: 0,
       response: null,
       error: null,
+      formData: {},
+      inputDisabled: false,
+      inputPlaceholder: "Une question ?",
+      currentOptions: [],
+      isRoundTrip: false,
+      optionAller: null,
+      optionRetour: null,
+      inputType: "text",
     };
   },
   methods: {
-    async sendMessage() {
-      console.log("sendMessage called");
-      if (this.userInput.trim()) {
-        this.messages.push({ id: this.messages.length + 1, text: this.userInput, isBot: false });
+    validatePhone(phone) {
+      const phoneRegex = /^0[1-9]\d{8}$/; // Format sans espace
+      const phoneWithSpacesRegex = /^0[1-9]( \d{2}){4}$/; // Format avec espace
+      return phoneRegex.test(phone.replace(/\s/g, "")) || phoneWithSpacesRegex.test(phone);
+    },
+    validateEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    },
+    async sendMessage(message = null) {
+      const content = message || this.userInput.trim();
+      this.userInput = "";
+      if (content) {
+        console.log("sendMessage called", content);
+
+        if (this.isFormStep) {
+          if (this.currentStep === 5 && !this.validatePhone(content)) {
+            this.messages.push({
+              id: this.messages.length + 1,
+              text: "Numéro de téléphone invalide. <br> Veuillez entrer un numéro valide.",
+              isBot: true,
+            });
+            this.scrollToBottom();
+            return;
+          }
+          if (this.currentStep === 6 && !this.validateEmail(content)) {
+            this.messages.push({
+              id: this.messages.length + 1,
+              text: "Adresse email invalide. <br> Veuillez entrer une adresse valide.",
+              isBot: true,
+            });
+            this.scrollToBottom();
+            return;
+          }
+          this.handleFormInput(content);
+          return;
+        }
+
+        this.messages.push({ id: this.messages.length + 1, text: content, isBot: false });
         this.showQuickActions = false;
         this.scrollToBottom();
 
@@ -63,60 +110,442 @@ export default {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              description: this.userInput,
+              description: content,
             }),
           });
           if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
           }
           const data = await res.json();
+          console.log("data", data);
           this.response = data.response;
-          console.log("response :", this.response);
+          if (data.type == "functionCall") {
+            if (data.functionName == "estimate") {
+              this.startForm();
+            } else if (data.functionName == "askCommercial") {
+              this.messages.push({
+                id: this.messages.length + 1,
+                text: "Vous pouvez nous appeler au : <br><span style='font-weight: bold'>09 80 40 04 84</span><br>Du lundi au vendredi de 10h à 18h.",
+                isBot: true,
+              });
+              this.scrollToBottom();
+            }
+          } else if (data.type == "conversation") {
+            this.messages.push({
+              id: this.messages.length + 1,
+              text: this.response,
+              isBot: true,
+            });
+            this.scrollToBottom();
+          }
           this.error = null;
         } catch (error) {
           this.error = error.toString();
+          console.error(this.error);
           this.response = null;
         }
-        this.userInput = "";
+      }
+    },
+    async sendFormData() {
+      console.log("sendFormData called", this.formData);
+      try {
+        const res = await fetch("http://10.76.203.217:5000/sendDevis", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(this.formData),
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        this.response = data.response;
+        console.log("response :", this.response);
+        this.error = null;
+      } catch (error) {
+        this.error = error.toString();
+        console.error(this.error);
+        this.response = null;
       }
     },
     handleQuickAction(action) {
       console.log(`Quick action selected: ${action}`);
-      this.messages.push({ id: this.messages.length + 1, text: action, isBot: false });
+      this.sendMessage(action);
       this.showQuickActions = false;
       this.scrollToBottom();
-      if (action === "Demande de devis") {
-        this.startForm();
-      }
     },
     startForm() {
+      // Etape 1
       this.messages.push({
         id: this.messages.length + 1,
         text: "Pour la création du devis nous avons besoin de quelques informations.",
         isBot: true,
       });
+      this.inputDisabled = true;
+      this.inputPlaceholder = " ";
       this.scrollToBottom();
       setTimeout(() => {
         this.messages.push({ id: this.messages.length + 1, text: "Vous êtes :", isBot: true });
         this.scrollToBottom();
         this.currentStep = 1;
+        this.currentOptions = ["Particulier", "Entreprise", "Association", "Collectivité"];
       }, 1500);
       this.isFormStep = true;
     },
     handleFormStep(selection) {
       console.log(`Form step selection: ${selection}`);
       this.messages.push({ id: this.messages.length + 1, text: selection, isBot: false });
+
+      switch (this.currentStep) {
+        case 1:
+          this.formData.Type_prospect = selection;
+          break;
+        case 2:
+          this.formData.Civilite = selection;
+          break;
+        case 7:
+          this.isRoundTrip = selection === "Aller retour";
+          this.formData.Type_voyage = selection;
+          break;
+        case 12:
+          this.optionAller = selection;
+          this.formData.Option_aller = selection;
+          break;
+        case 15:
+          this.optionRetour = selection;
+          this.formData.Option_retour = selection;
+          break;
+        case 18:
+          if (selection == "Oui") {
+            this.formData["Acceptation CGU/CGV"] = "on";
+          } else if (selection == "Non") {
+            this.formData["Acceptation CGU/CGV"] = "off";
+          }
+          break;
+      }
+      this.nextFormStep();
+      this.scrollToBottom();
+    },
+    handleFormInput(content) {
+      console.log(`Form step content: ${content}`);
+      this.messages.push({ id: this.messages.length + 1, text: content, isBot: false });
+
+      switch (this.currentStep) {
+        case 3:
+          this.formData.Nom_prospect = content;
+          break;
+        case 4:
+          this.formData.Prenom_prospect = content;
+          break;
+        case 5:
+          this.formData.Telephone_prospect = content;
+          break;
+        case 6:
+          this.formData.Email_prospect = content;
+          break;
+        case 8:
+          this.formData.Nombre_participants = parseInt(content, 10);
+          break;
+        case 9:
+          this.formData.Lieu_depart = content;
+          break;
+        case 10:
+          this.formData.Lieu_arrivee = content;
+          break;
+        case 11:
+          this.formData.Date_aller = content;
+          break;
+        case 13:
+          this.formData.Horaire_aller = content;
+          break;
+        case 14:
+          this.formData.Date_retour = content;
+          break;
+        case 16:
+          this.formData.Horaire_retour = content;
+          break;
+        case 17:
+          this.formData.Informations_complementaires = content;
+          this.sendFormData();
+          break;
+      }
       this.nextFormStep();
       this.scrollToBottom();
     },
     nextFormStep() {
-      // Ajoutez ici la logique pour aller à l'étape suivante du formulaire
+      this.currentOptions = [];
+      this.inputDisabled = true;
+      this.inputPlaceholder = " ";
+      this.inputType = "text";
       this.currentStep++;
-      // Exemple: pour l'étape 2
+      // Etape 2
       if (this.currentStep === 2) {
-        this.messages.push({ id: this.messages.length + 1, text: "Deuxième étape du formulaire...", isBot: true });
-        this.scrollToBottom();
-        // Ajoutez les boutons de l'étape suivante si nécessaire
+        setTimeout(() => {
+          this.messages.push({ id: this.messages.length + 1, text: "Quelle est votre civilité ?", isBot: true });
+          this.scrollToBottom();
+          this.inputDisabled = true;
+          this.inputPlaceholder = " ";
+          this.currentOptions = ["M.", "Mme.", "Melle."];
+        }, 1000);
+      }
+      // Etape 3
+      if (this.currentStep === 3) {
+        setTimeout(() => {
+          this.messages.push({ id: this.messages.length + 1, text: "Quelle est votre nom de famille ?", isBot: true });
+          this.scrollToBottom();
+          this.inputDisabled = false;
+          this.inputPlaceholder = "Nom de famille";
+          this.$nextTick(() => this.$refs.userInput.focus());
+        }, 1000);
+      }
+      // Etape 4
+      if (this.currentStep === 4) {
+        setTimeout(() => {
+          this.messages.push({ id: this.messages.length + 1, text: "Quelle est votre prénom ?", isBot: true });
+          this.scrollToBottom();
+          this.inputDisabled = false;
+          this.inputPlaceholder = "Prénom";
+          this.$nextTick(() => this.$refs.userInput.focus());
+        }, 1000);
+      }
+      // Etape 5
+      if (this.currentStep === 5) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Nous avons maintenant besoin de vos coordonées. <br> Quel est votre numéro téléphone ?",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = false;
+          this.inputPlaceholder = "Téléphone";
+          this.inputType = "tel";
+          this.$nextTick(() => this.$refs.userInput.focus());
+        }, 1000);
+      }
+      // Etape 6
+      if (this.currentStep === 6) {
+        setTimeout(() => {
+          this.messages.push({ id: this.messages.length + 1, text: "Et votre adresse email ?", isBot: true });
+          this.scrollToBottom();
+          this.inputDisabled = false;
+          this.inputPlaceholder = "Email";
+          this.inputType = "email";
+          this.$nextTick(() => this.$refs.userInput.focus());
+        }, 1000);
+      }
+      // Etape 7
+      if (this.currentStep === 7) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Nous allons maintenant passer aux détails de votre voyage. <br> Souhaitez-vous faire un aller simple ou un aller retour ?",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = true;
+          this.inputPlaceholder = " ";
+          this.currentOptions = ["Aller simple", "Aller retour"];
+        }, 1000);
+      }
+      // Etape 8
+      if (this.currentStep === 8) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Pour combien de passagers ?",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = false;
+          this.inputPlaceholder = "Nombre de passagers";
+          this.inputType = "number";
+          this.$nextTick(() => this.$refs.userInput.focus());
+        }, 1000);
+      }
+      // Etape 9
+      if (this.currentStep === 9) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Quel est le lieu de départ ?",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = false;
+          this.inputPlaceholder = "Lieu de départ";
+          this.inputType = "text";
+          this.$nextTick(() => this.$refs.userInput.focus());
+        }, 1000);
+      }
+      // Etape 10
+      if (this.currentStep === 10) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Et le lieu d'arrivée ?",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = false;
+          this.inputPlaceholder = "Lieu d'arrivée";
+          this.$nextTick(() => this.$refs.userInput.focus());
+        }, 1000);
+      }
+      // Etape 11
+      if (this.currentStep === 11) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Quelle est la date de l'aller ?",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = false;
+          this.inputPlaceholder = "Date de l'aller";
+          this.inputType = "date";
+          this.$nextTick(() => this.$refs.userInput.focus());
+        }, 1000);
+      }
+      // Etape 12
+      if (this.currentStep === 12) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Vous souhaitez nous donner l'heure de départ ou d'arrivée de l'aller ?",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = true;
+          this.inputPlaceholder = " ";
+          this.currentOptions = ["Départ à", "Arrivée à"];
+        }, 1000);
+      }
+      // Etape 13
+      if (this.currentStep === 13) {
+        if (this.optionAller == "Départ à") {
+          setTimeout(() => {
+            this.messages.push({
+              id: this.messages.length + 1,
+              text: "Quelle est l'heure de départ de l'aller ?",
+              isBot: true,
+            });
+            this.scrollToBottom();
+            this.inputDisabled = false;
+            this.inputPlaceholder = "Heure de départ aller";
+            this.inputType = "time";
+            this.$nextTick(() => this.$refs.userInput.focus());
+          }, 1000);
+        } else if (this.optionAller == "Arrivée à") {
+          setTimeout(() => {
+            this.messages.push({
+              id: this.messages.length + 1,
+              text: "Quelle est l'heure d'arrivée de l'aller ?",
+              isBot: true,
+            });
+            this.scrollToBottom();
+            this.inputDisabled = false;
+            this.inputPlaceholder = "Heure d'arrivée aller";
+            this.$nextTick(() => this.$refs.userInput.focus());
+          }, 1000);
+        }
+      }
+      // Etape 14
+      if (this.currentStep === 14) {
+        if (this.isRoundTrip) {
+          setTimeout(() => {
+            this.messages.push({
+              id: this.messages.length + 1,
+              text: "Quelle est la date du retour ?",
+              isBot: true,
+            });
+            this.scrollToBottom();
+            this.inputDisabled = false;
+            this.inputPlaceholder = "Date du retour";
+            this.$nextTick(() => this.$refs.userInput.focus());
+          }, 1000);
+        } else {
+          this.currentStep++;
+        }
+      }
+      // Etape 15
+      if (this.currentStep === 15) {
+        if (this.isRoundTrip) {
+          setTimeout(() => {
+            this.messages.push({
+              id: this.messages.length + 1,
+              text: "Vous souhaitez nous donner l'heure de départ ou d'arrivée du retour ?",
+              isBot: true,
+            });
+            this.scrollToBottom();
+            this.inputDisabled = true;
+            this.inputPlaceholder = " ";
+            this.currentOptions = ["Départ à", "Arrivée à"];
+          }, 1000);
+        } else {
+          this.currentStep++;
+        }
+      }
+      // Etape 16
+      if (this.currentStep === 16) {
+        if (this.isRoundTrip) {
+          if (this.optionRetour == "Départ à") {
+            setTimeout(() => {
+              this.messages.push({
+                id: this.messages.length + 1,
+                text: "Quelle est l'heure de départ du retour ?",
+                isBot: true,
+              });
+              this.scrollToBottom();
+              this.inputDisabled = false;
+              this.inputPlaceholder = "Heure de départ retour";
+              this.$nextTick(() => this.$refs.userInput.focus());
+            }, 1000);
+          } else if (this.optionRetour == "Arrivée à") {
+            setTimeout(() => {
+              this.messages.push({
+                id: this.messages.length + 1,
+                text: "Quelle est l'heure d'arrivée du retour ?",
+                isBot: true,
+              });
+              this.scrollToBottom();
+              this.inputDisabled = false;
+              this.inputPlaceholder = "Heure d'arrivée retour";
+              this.$nextTick(() => this.$refs.userInput.focus());
+            }, 1000);
+          }
+        } else {
+          this.currentStep++;
+        }
+      }
+      // Etape 17
+      if (this.currentStep === 17) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Décrivez votre projet. Vous pouvez aussi donner des précisions qui pourraient impacter le prix comme par exemple des étapes ou des besoins en équipements spécifiques...",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = false;
+          this.inputPlaceholder = "Description";
+          this.$nextTick(() => this.$refs.userInput.focus());
+        }, 1000);
+      }
+      // Etape 18
+      if (this.currentStep === 18) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "J'accepte de recevoir par email, les informations en provenance du site www.autocar-location.com",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = true;
+          this.inputPlaceholder = " ";
+          this.currentOptions = ["Oui", "Non"];
+        }, 1000);
       }
     },
     scrollToBottom() {
@@ -148,7 +577,7 @@ export default {
   margin: 4px 0;
   padding: 10px;
   border-radius: 10px;
-  max-width: 58%;
+  max-width: 57%;
   word-wrap: break-word;
 }
 .chatbot-message.bot {
@@ -160,11 +589,10 @@ export default {
   padding-right: 15px;
 }
 .chatbot-message.bot span {
-  margin-left: -25px;
+  margin-left: -20px;
 }
 .bot-avatar {
-  width: 30px;
-  height: 30px;
+  height: 25px;
   position: relative;
   left: -45px;
 }
@@ -218,5 +646,9 @@ export default {
 .quick-actions-btn:hover {
   background-color: #4e38cc;
   color: white;
+}
+.chatbot-input-btn.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 </style>
