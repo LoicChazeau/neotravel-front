@@ -6,16 +6,22 @@
     <img src="logo.svg" alt="Logo" width="80" height="80">
   </a>
 
-  <h3 align="center">Mathéo</h3>
+  <h3 align="center">Neotravel - Front</h3>
   <p align="center">
     Développement d'un Chatbot pour Neotravel
     <br />
     <br />
     <a href="https://neotravel-front.vercel.app">Chatbot</a>
     <br />
-    <a href="https://g162578.learnai.fr">Web site</a>
+    <a href="https://g162578.learnai.fr">Web site (Wordpress)</a>
+    <br />
+    <a href="https://neotravel-back-indol.vercel.app/">API du Chatbot</a>
   </p>
 </div>
+
+## NeoTravel Chatbot
+
+Ce projet implémente un chatbot pour le site de location de voyage en bus NeoTravel. Le chatbot utilise OpenAI pour générer des réponses basées sur les messages des utilisateurs et Airtable pour gérer les données des devis.
 
 
 ## Built With
@@ -25,6 +31,8 @@ Vue.js
 Vite
 <br/>
 Vercel
+<br/>
+Wordpress (elementor)
 
 
 <!-- GETTING STARTED -->
