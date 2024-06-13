@@ -58,21 +58,31 @@ export default {
       optionAller: null,
       optionRetour: null,
       inputType: "text",
+      responseFormData: null,
+      feedback: null,
     };
   },
   methods: {
     validatePhone(phone) {
+      // Validation du téléphone
       const phoneRegex = /^0[1-9]\d{8}$/; // Format sans espace
       const phoneWithSpacesRegex = /^0[1-9]( \d{2}){4}$/; // Format avec espace
       return phoneRegex.test(phone.replace(/\s/g, "")) || phoneWithSpacesRegex.test(phone);
     },
     validateEmail(email) {
+      // Validation de l'email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return emailRegex.test(email);
     },
     async sendMessage(message = null) {
       const content = message || this.userInput.trim();
       this.userInput = "";
+
+      if (this.isFormStep && !content && (this.currentStep === 17 || this.currentStep === 22)) {
+        this.handleFormInput(content);
+        return;
+      }
+
       if (content) {
         console.log("sendMessage called", content);
 
@@ -104,7 +114,7 @@ export default {
         this.scrollToBottom();
 
         try {
-          const res = await fetch("http://10.76.203.217:5000/conversation", {
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/conversation`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -149,7 +159,7 @@ export default {
     async sendFormData() {
       console.log("sendFormData called", this.formData);
       try {
-        const res = await fetch("http://10.76.203.217:5000/sendDevis", {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/sendDevis`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -160,8 +170,36 @@ export default {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
         const data = await res.json();
+        console.log("data : ", data);
         this.response = data.response;
-        console.log("response :", this.response);
+        this.responseFormData = data;
+        if (this.responseFormData.success) {
+          console.log("PDF true");
+          this.nextFormStep();
+        }
+        this.error = null;
+      } catch (error) {
+        this.error = error.toString();
+        console.error(this.error);
+        this.response = null;
+      }
+    },
+    async sendFeedback() {
+      console.log("sendfeedback called", this.feedback);
+      const feedbackData = {};
+      feedbackData.id = this.responseFormData.id;
+      feedbackData.feedback = this.feedback;
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/sendFeedback`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(feedbackData),
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
         this.error = null;
       } catch (error) {
         this.error = error.toString();
@@ -176,6 +214,16 @@ export default {
       this.scrollToBottom();
     },
     startForm() {
+      // Reset des variables
+      this.formData = {};
+      this.isRoundTrip = false;
+      this.optionAller = null;
+      this.optionRetour = null;
+      this.currentStep = 0;
+      this.isFormStep = true;
+      this.responseFormData = null;
+      this.feedback = null;
+
       // Etape 1
       this.messages.push({
         id: this.messages.length + 1,
@@ -222,6 +270,29 @@ export default {
           } else if (selection == "Non") {
             this.formData["Acceptation CGU/CGV"] = "off";
           }
+          this.sendFormData();
+          break;
+        case 21:
+          if (selection == "Oui") {
+            this.messages.push({
+              id: this.messages.length + 1,
+              text: "Votre devis va être transmis à notre équipe commerciale. <br> Nous vous recontacterons au plus vite.",
+              isBot: true,
+            });
+            this.scrollToBottom();
+            this.nextFormStep();
+          } else if (selection == "Non") {
+            this.messages.push({
+              id: this.messages.length + 1,
+              text: "Votre devis ne sera pas transmis à notre équipe commerciale.<br> Vous pouvez nous joindre au <span style='font-weight: bold'>09 80 40 04 84</span> si besoin.",
+              isBot: true,
+            });
+            this.scrollToBottom();
+            this.nextFormStep();
+          } else if (selection == "Je veux recommencer") {
+            this.startForm();
+            return;
+          }
           break;
       }
       this.nextFormStep();
@@ -229,7 +300,9 @@ export default {
     },
     handleFormInput(content) {
       console.log(`Form step content: ${content}`);
-      this.messages.push({ id: this.messages.length + 1, text: content, isBot: false });
+      if (content || (this.currentStep !== 17 && this.currentStep !== 22)) {
+        this.messages.push({ id: this.messages.length + 1, text: content, isBot: false });
+      }
 
       switch (this.currentStep) {
         case 3:
@@ -266,12 +339,27 @@ export default {
           this.formData.Horaire_retour = content;
           break;
         case 17:
-          this.formData.Informations_complementaires = content;
-          this.sendFormData();
+          this.formData.Informations_complementaires = content || "";
+          break;
+        case 22:
+          this.feedback = content || "";
+          this.sendFeedback(this.feedback);
+          this.addDefaultBotMessages();
           break;
       }
       this.nextFormStep();
       this.scrollToBottom();
+    },
+    addDefaultBotMessages() {
+      setTimeout(() => {
+        this.messages.push({
+          id: this.messages.length + 1,
+          text: "Bonjour ! Comment puis-je vous aider ?",
+          isBot: true,
+        });
+        this.showQuickActions = true;
+        this.scrollToBottom();
+      }, 1000);
     },
     nextFormStep() {
       this.currentOptions = [];
@@ -279,6 +367,7 @@ export default {
       this.inputPlaceholder = " ";
       this.inputType = "text";
       this.currentStep++;
+
       // Etape 2
       if (this.currentStep === 2) {
         setTimeout(() => {
@@ -292,7 +381,7 @@ export default {
       // Etape 3
       if (this.currentStep === 3) {
         setTimeout(() => {
-          this.messages.push({ id: this.messages.length + 1, text: "Quelle est votre nom de famille ?", isBot: true });
+          this.messages.push({ id: this.messages.length + 1, text: "Quel est votre nom de famille ?", isBot: true });
           this.scrollToBottom();
           this.inputDisabled = false;
           this.inputPlaceholder = "Nom de famille";
@@ -302,7 +391,7 @@ export default {
       // Etape 4
       if (this.currentStep === 4) {
         setTimeout(() => {
-          this.messages.push({ id: this.messages.length + 1, text: "Quelle est votre prénom ?", isBot: true });
+          this.messages.push({ id: this.messages.length + 1, text: "Quel est votre prénom ?", isBot: true });
           this.scrollToBottom();
           this.inputDisabled = false;
           this.inputPlaceholder = "Prénom";
@@ -314,7 +403,7 @@ export default {
         setTimeout(() => {
           this.messages.push({
             id: this.messages.length + 1,
-            text: "Nous avons maintenant besoin de vos coordonées. <br> Quel est votre numéro téléphone ?",
+            text: "Nous avons maintenant besoin de vos coordonnées. <br> Quel est votre numéro téléphone ?",
             isBot: true,
           });
           this.scrollToBottom();
@@ -447,6 +536,7 @@ export default {
             this.scrollToBottom();
             this.inputDisabled = false;
             this.inputPlaceholder = "Heure d'arrivée aller";
+            this.inputType = "time";
             this.$nextTick(() => this.$refs.userInput.focus());
           }, 1000);
         }
@@ -463,6 +553,7 @@ export default {
             this.scrollToBottom();
             this.inputDisabled = false;
             this.inputPlaceholder = "Date du retour";
+            this.inputType = "date";
             this.$nextTick(() => this.$refs.userInput.focus());
           }, 1000);
         } else {
@@ -500,6 +591,7 @@ export default {
               this.scrollToBottom();
               this.inputDisabled = false;
               this.inputPlaceholder = "Heure de départ retour";
+              this.inputType = "time";
               this.$nextTick(() => this.$refs.userInput.focus());
             }, 1000);
           } else if (this.optionRetour == "Arrivée à") {
@@ -512,6 +604,7 @@ export default {
               this.scrollToBottom();
               this.inputDisabled = false;
               this.inputPlaceholder = "Heure d'arrivée retour";
+              this.inputType = "time";
               this.$nextTick(() => this.$refs.userInput.focus());
             }, 1000);
           }
@@ -529,7 +622,7 @@ export default {
           });
           this.scrollToBottom();
           this.inputDisabled = false;
-          this.inputPlaceholder = "Description";
+          this.inputPlaceholder = "Description (facultatif)";
           this.$nextTick(() => this.$refs.userInput.focus());
         }, 1000);
       }
@@ -545,6 +638,86 @@ export default {
           this.inputDisabled = true;
           this.inputPlaceholder = " ";
           this.currentOptions = ["Oui", "Non"];
+        }, 1000);
+      }
+      // Etape 19
+      if (this.currentStep === 19) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Nous avons toutes les informations nécessaires.",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = true;
+          this.inputPlaceholder = " ";
+        }, 1000);
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Votre devis est en cours de création veuillez patienter...",
+            isBot: true,
+          });
+          this.scrollToBottom();
+        }, 2000);
+      }
+      // Etape 20
+      if (this.currentStep === 20) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Voici votre devis :",
+            isBot: true,
+          });
+          this.scrollToBottom();
+
+          setTimeout(() => {
+            const pdfUrl = this.responseFormData.pdf_url;
+            this.messages.push({
+              id: this.messages.length + 1,
+              text: `<a href="${pdfUrl}" target="_blank">Cliquez ici pour voir le devis</a>`,
+              isBot: true,
+            });
+            this.scrollToBottom();
+
+            setTimeout(() => {
+              this.messages.push({
+                id: this.messages.length + 1,
+                text: "Le devis vous a aussi été envoyé par mail",
+                isBot: true,
+              });
+              this.scrollToBottom();
+              this.nextFormStep();
+            }, 1000);
+          }, 2000);
+        }, 500);
+      }
+      // Etape 21
+      if (this.currentStep === 21) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Est-ce que le devis vous convient ?",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = true;
+          this.inputPlaceholder = " ";
+          this.currentOptions = ["Oui", "Non", "Je veux recommencer"];
+        }, 3000);
+      }
+      // Etape 22
+      if (this.currentStep === 22) {
+        setTimeout(() => {
+          this.messages.push({
+            id: this.messages.length + 1,
+            text: "Merci d'avoir utilisé notre Chatbot pour la création de votre devis. <br> Si vous le souhaitez, vous pouvez nous faire un retour d'expérience.",
+            isBot: true,
+          });
+          this.scrollToBottom();
+          this.inputDisabled = false;
+          this.inputPlaceholder = "Feedback (facultatif)";
+          this.$nextTick(() => this.$refs.userInput.focus());
         }, 1000);
       }
     },
@@ -566,12 +739,14 @@ export default {
   height: 400px;
   padding: 10px 20px;
 }
+
 .chatbot-messages {
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
+
 .chatbot-message {
   font-size: 12px;
   margin: 4px 0;
@@ -580,6 +755,7 @@ export default {
   max-width: 57%;
   word-wrap: break-word;
 }
+
 .chatbot-message.bot {
   background-color: #f5f5f5;
   display: flex;
@@ -588,25 +764,30 @@ export default {
   margin-left: 40px;
   padding-right: 15px;
 }
+
 .chatbot-message.bot span {
   margin-left: -20px;
 }
+
 .bot-avatar {
   height: 25px;
   position: relative;
   left: -45px;
 }
+
 .chatbot-message.user {
   background-color: #4e38cc;
   color: white;
   align-self: flex-end;
   margin-right: 10px;
 }
+
 .chatbot-input-container {
   display: flex;
   align-items: center;
   padding-top: 10px;
 }
+
 .chatbot-input {
   flex: 1;
   padding: 10px;
@@ -616,19 +797,23 @@ export default {
   margin-right: 10px;
   font-size: 13px;
 }
+
 .chatbot-input:focus-visible {
   outline: #4e38cc auto 1px;
 }
+
 .chatbot-input-btn {
   cursor: pointer;
   width: 40px;
   margin-left: 3px;
 }
+
 .quick-actions {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
 }
+
 .quick-actions-btn {
   background-color: white;
   border: 1px solid #4e38cc;
@@ -643,10 +828,12 @@ export default {
   font-size: 12px;
   box-shadow: 0px 3px 8px 0px rgb(0 0 0 / 15%);
 }
+
 .quick-actions-btn:hover {
   background-color: #4e38cc;
   color: white;
 }
+
 .chatbot-input-btn.disabled {
   cursor: not-allowed;
   opacity: 0.5;
