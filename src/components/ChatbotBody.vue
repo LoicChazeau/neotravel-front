@@ -86,7 +86,7 @@ export default {
       const content = message || this.userInput.trim();
       this.userInput = "";
 
-      if (this.isFormStep && !content && (this.currentStep === 17 || this.currentStep === 22)) {
+      if (this.isFormStep && !content && (this.currentStep === 17 || this.currentStep === 23)) {
         this.handleFormInput(content);
         return;
       }
@@ -295,12 +295,15 @@ export default {
           } else if (selection == "Non") {
             this.messages.push({
               id: this.messages.length + 1,
-              text: "Votre devis ne sera pas transmis à notre équipe commerciale.<br> Vous pouvez nous joindre au <span style='font-weight: bold'>09 80 40 04 84</span> si besoin.",
+              text: "Votre devis ne sera pas transmis à notre équipe commerciale.<br> Vous pouvez nous joindre au : <br><span style='font-weight: bold'>09 80 40 04 84</span> si besoin.",
               isBot: true,
             });
             this.scrollToBottom();
             this.nextFormStep();
           } else if (selection == "Je veux recommencer") {
+            this.inputDisabled = true;
+            this.inputPlaceholder = " ";
+            this.currentOptions = [];
             this.startForm();
             return;
           }
@@ -311,7 +314,7 @@ export default {
     },
     handleFormInput(content) {
       console.log(`Form step content: ${content}`);
-      if (content || (this.currentStep !== 17 && this.currentStep !== 22)) {
+      if (content || (this.currentStep !== 17 && this.currentStep !== 23)) {
         this.messages.push({ id: this.messages.length + 1, text: content, isBot: false });
       }
 
@@ -352,7 +355,7 @@ export default {
         case 17:
           this.formData.Informations_complementaires = content || "";
           break;
-        case 22:
+        case 23:
           this.feedback = content || "";
           this.sendFeedback(this.feedback);
           this.addDefaultBotMessages();
@@ -369,6 +372,9 @@ export default {
           isBot: true,
         });
         this.showQuickActions = true;
+        this.isFormStep = false;
+        this.inputDisabled = false;
+        this.inputPlaceholder = "Une question ?";
         this.scrollToBottom();
       }, 1000);
     },
@@ -686,7 +692,7 @@ export default {
             const pdfUrl = this.responseFormData.pdf_url;
             this.messages.push({
               id: this.messages.length + 1,
-              text: `<a href="${pdfUrl}" target="_blank">Cliquez ici pour voir le devis</a>`,
+              text: `<a href="${pdfUrl}" target="_blank">Cliquez ici pour télécharger le devis</a>`,
               isBot: true,
             });
             this.scrollToBottom();
