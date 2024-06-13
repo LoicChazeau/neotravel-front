@@ -6,14 +6,14 @@
     <img src="logo.svg" alt="Logo" width="80" height="80">
   </a>
 
-  <h3 align="center">Mathéo</h3>
+  <h3 align="center">Neotravel</h3>
   <p align="center">
     Développement d'un Chatbot pour Neotravel
     <br />
     <br />
     <a href="https://neotravel-front.vercel.app">Chatbot</a>
     <br />
-    <a href="https://g162578.learnai.fr">Web site</a>
+    <a href="https://g162578.learnai.fr">Web site (Wordpress)</a>
   </p>
 </div>
 
@@ -25,6 +25,8 @@ Vue.js
 Vite
 <br/>
 Vercel
+<br/>
+Wordpress (elementor)
 
 
 <!-- GETTING STARTED -->
