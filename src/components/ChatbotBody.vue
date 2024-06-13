@@ -63,6 +63,14 @@ export default {
     };
   },
   methods: {
+    buildHistory() {
+      return this.messages.map((message) => {
+        return {
+          role: message.isBot ? "system" : "user",
+          content: message.text,
+        };
+      });
+    },
     validatePhone(phone) {
       // Validation du téléphone
       const phoneRegex = /^0[1-9]\d{8}$/; // Format sans espace
@@ -113,6 +121,8 @@ export default {
         this.showQuickActions = false;
         this.scrollToBottom();
 
+        const history = this.buildHistory();
+
         try {
           const res = await fetch(`${import.meta.env.VITE_API_URL}/conversation`, {
             method: "POST",
@@ -121,6 +131,7 @@ export default {
             },
             body: JSON.stringify({
               description: content,
+              historique: history,
             }),
           });
           if (!res.ok) {
