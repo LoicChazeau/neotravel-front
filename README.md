@@ -1,7 +1,59 @@
-# Vue 3 + Vite
+<a name="readme-top"></a>
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+<br />
+<div align="center">
+  <a href="https://github.com/LoicChazeau/neotravel-front">
+    <img src="logo.svg" alt="Logo" width="80" height="80">
+  </a>
 
-## Recommended IDE Setup
+  <h3 align="center">Mathéo</h3>
+  <p align="center">
+    Développement d'un Chatbot pour Neotravel
+    <br />
+    <br />
+    <a href="https://neotravel-front.vercel.app">Chatbot</a>
+    <br />
+    <a href="https://g162578.learnai.fr">Web site</a>
+  </p>
+</div>
 
-- [VS Code](https://code.visualstudio.com/) + [Vue - Official](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (previously Volar) and disable Vetur
+
+## Built With
+
+Vue.js
+<br/>
+Vite
+<br/>
+Vercel
+
+
+<!-- GETTING STARTED -->
+## Utilisation
+
+Url du projet Front : https://neotravel-front.vercel.app
+
+### Clone local
+
+Voici la marche à suivre pour lancer le projet en local : 
+
+1. Clone the repo
+   ```sh
+   git clone https://github.com/LoicChazeau/neotravel-front
+   ```
+2. Install NPM packages
+   ```sh
+   npm install
+   ```
+3. Run the project
+   ```sh
+   npm run dev
+   ```
+4. Go to : http://localhost:5173/
+
+<!-- Auteurs -->
+## Auteurs
+
+- Loïc Chazeau
+- Guillaume Ravan Nalbandian
+- Quentin Taverne
+- Ngone Ba
