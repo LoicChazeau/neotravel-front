@@ -60,6 +60,7 @@ export default {
       inputType: "text",
       responseFormData: null,
       feedback: null,
+      pdfUrl: null,
     };
   },
   methods: {
@@ -186,8 +187,38 @@ export default {
         this.responseFormData = data;
         if (this.responseFormData.success) {
           console.log("PDF true");
-          this.nextFormStep();
         }
+        this.error = null;
+      } catch (error) {
+        this.error = error.toString();
+        console.error(this.error);
+        this.response = null;
+      }
+    },
+    wait() {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve("resolved");
+        }, 10000);
+      });
+    },
+    async getPdf() {
+      await this.wait();
+      console.log("getPdf called", this.responseFormData.id);
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/getPdf?id=${this.responseFormData.id}`, {
+          method: "get",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        console.log("data : ", data);
+        this.pdfUrl = data.pdf_url;
+        this.nextFormStep();
         this.error = null;
       } catch (error) {
         this.error = error.toString();
@@ -676,6 +707,7 @@ export default {
             isBot: true,
           });
           this.scrollToBottom();
+          this.getPdf();
         }, 2000);
       }
       // Etape 20
@@ -689,7 +721,7 @@ export default {
           this.scrollToBottom();
 
           setTimeout(() => {
-            const pdfUrl = this.responseFormData.pdf_url;
+            const pdfUrl = this.pdfUrl;
             this.messages.push({
               id: this.messages.length + 1,
               text: `<a href="${pdfUrl}" target="_blank">Cliquez ici pour télécharger le devis</a>`,
